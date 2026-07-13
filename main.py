@@ -7,16 +7,12 @@ No passwords stored — all processing in memory.
 import math, re
 from typing import Optional
 
-from fastapi import Query
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from ratelimit import RateLimitMiddleware
 
 app = FastAPI(title="Password Strength Checker API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-app.add_middleware(RateLimitMiddleware)
-
-
 
 class PasswordResult(BaseModel):
     score: int  # 0-100
@@ -99,8 +95,6 @@ def check_password(password: str) -> PasswordResult:
         has_digit=has_digit, has_special=has_special,
         suggestions=suggestions, crack_time=ct,
     )
-
-
 
 @app.get("/")
 async def root():
