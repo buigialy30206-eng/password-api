@@ -102,7 +102,7 @@ def check_password(password: str) -> PasswordResult:
 
 @app.get("/")
 async def root():
-    return {"service": "Password Strength Checker API", "version": "1.0.0"}
+    return {"service": "Password Strength Checker API", "version": "1.0.0", "related": ["UUID Generator API", "Email Validator API"]}
 
 @app.get("/check", response_model=PasswordResult)
 async def check(password: str = Query(..., description="Password to analyze")):
