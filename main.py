@@ -7,30 +7,14 @@ No passwords stored — all processing in memory.
 import math, re
 from typing import Optional
 
-from fastapi import FastAPI, Depends, Query
+from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-import time as _t, threading as _th
-_rl_win, _rl_max, _rl_hits, _rl_lk = 60, 60, {}, _th.Lock()
-
-async def _rate_limit(request):
-    from fastapi import Request, HTTPException
-    ip = (request.headers.get('X-Forwarded-For','') or request.headers.get('X-Real-IP','') or (request.client.host if request.client else '127.0.0.1')).split(',')[0].strip()
-    now = _t.time()
-    with _rl_lk:
-        e = _rl_hits.get(ip)
-        if e:
-            if now - e['s'] > _rl_win: e['s'], e['c'] = now, 1
-            else:
-                e['c'] += 1
-                if e['c'] > _rl_max: raise HTTPException(429, 'Too many requests')
-        else: _rl_hits[ip] = {'s': now, 'c': 1}
-    return True
+from ratelimit import RateLimitMiddleware
 
 app = FastAPI(title="Password Strength Checker API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
+app.add_middleware(RateLimitMiddleware)
 
 
 
@@ -45,7 +29,6 @@ class PasswordResult(BaseModel):
     suggestions: list[str] = []
     crack_time: Optional[str] = None
 
-
 COMMON_PASSWORDS = {
     "password", "123456", "12345678", "qwerty", "abc123", "monkey",
     "1234567", "letmein", "trustno1", "dragon", "baseball", "iloveyou",
@@ -53,7 +36,6 @@ COMMON_PASSWORDS = {
     "654321", "superman", "qazwsx", "michael", "football", "admin",
     "welcome", "password1", "111111", "000000", "admin123",
 }
-
 
 def check_password(password: str) -> PasswordResult:
     length = len(password)
@@ -120,11 +102,9 @@ def check_password(password: str) -> PasswordResult:
 
 
 
-
 @app.get("/")
 async def root():
     return {"service": "Password Strength Checker API", "version": "1.0.0"}
-
 
 @app.get("/check", response_model=PasswordResult)
 async def check(password: str = Query(..., description="Password to analyze")):
